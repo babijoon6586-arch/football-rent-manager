@@ -12,7 +12,7 @@
 <style>
 body{font-family:tahoma;background:#f4f6fa;margin:20px}
 .card{background:white;padding:20px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:25px}
-button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer}
+button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer;margin-top:5px}
 button:hover{background:#0039cb}
 input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
 .table{width:100%;border-collapse:collapse;margin-top:10px}
@@ -41,7 +41,7 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 
 <div class="summary">
 <p>مبلغ کل: <span id="totalCost">0</span></p>
-<p>سهم هر نفر (جلسات باقی مانده تقسیم بر بازیکنان فعلی): <span id="sharePerPlayer">0</span></p>
+<p>سهم هر نفر (جلسات باقی مانده تقسیم بین بازیکنان فعلی): <span id="sharePerPlayer">0</span></p>
 </div>
 </div>
 
@@ -100,15 +100,15 @@ saveAll()
 updateCalculations()
 })
 
-// انتخاب چند تاریخ
+// ✅ انتخاب چند تاریخ واقعی و درست
 $("#reserveInput").persianDatepicker({
 format:"YYYY/MM/DD",
 multiple:true,
 autoClose:false,
 calendar:{persian:{locale:"fa"}},
 onSelect:function(){
-let value=$("#reserveInput").val()
-reservations=value?value.split(","):[]
+let val=$("#reserveInput").val()
+reservations = val ? val.split(",") : []
 $("#sessionCount").text(reservations.length)
 saveAll()
 renderCalendar()
@@ -119,7 +119,7 @@ $("#openReserve").click(function(){
 $("#reserveInput").persianDatepicker("show")
 })
 
-// تقویم ثابت
+// ✅ تقویم ثابت فقط نمایش (غیر کلیک)
 function renderCalendar(){
 $("#calendar").persianDatepicker("destroy")
 $("#calendar").persianDatepicker({
@@ -132,6 +132,7 @@ let d=date.format("YYYY/MM/DD")
 if(reservations.includes(d)){
 return {className:"reserved-day"}
 }
+return {}
 }
 })
 }
@@ -153,23 +154,20 @@ saveAll()
 updateCalculations()
 }
 
-// محاسبه سهم و بدهی / طلب
+// ✅ محاسبه سهم پویا و بدهی/طلب
 function updateCalculations(){
 let totalCost=reservations.length*sessionPrice
 $("#totalCost").text(Number(totalCost).toLocaleString())
 
-// تعداد جلسات گذشته
-let pastSessionsCount=0
-// برای ساده‌سازی فرض می‌کنیم همه جلسات آینده هستند
-let remainingSessions=reservations.length
-let currentPlayers=players.length
-
-let share= currentPlayers>0 ? Math.ceil((sessionPrice*remainingSessions)/currentPlayers) :0
+// سهم هر نفر براساس جلسات باقی مانده و تعداد بازیکنان فعلی
+let remainingSessions = reservations.length
+let currentPlayers = players.length
+let share = currentPlayers>0 ? Math.ceil(totalCost/currentPlayers) : 0
 $("#sharePerPlayer").text(Number(share).toLocaleString())
 
 $("#playersTable").html("")
 players.forEach((p,i)=>{
-let debt=share - (p.paid||0)
+let debt = share - (p.paid||0)
 let status="تسویه",cls="status-zero"
 if(debt>0){status="بدهکار";cls="status-red"}
 if(debt<0){status="طلبکار";cls="status-green"}
@@ -196,7 +194,7 @@ updateCalculations()
 updateClock()
 }
 init()
-</script>
 
+</script>
 </body>
 </html>
