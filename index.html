@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <title>مدیریت اجاره فوتبال</title>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fa.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 
 <style>
 body{font-family:tahoma;background:#f4f6fa;margin:20px}
-h2{margin-top:40px}
+h2{margin-top:30px}
 .card{background:white;padding:20px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:25px}
 button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer}
 button:hover{background:#0039cb}
@@ -21,8 +23,8 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 .status-green{color:green;font-weight:bold}
 .status-red{color:red;font-weight:bold}
 .status-zero{color:#555;font-weight:bold}
-#clock{font-size:18px;font-weight:bold;margin-bottom:10px}
-.reserved-day{background:#ff5252 !important;color:white !important;border-radius:50%}
+#clock{font-size:18px;font-weight:bold;margin-bottom:15px}
+.reserved{background:#ff5252 !important;color:white !important;border-radius:50%}
 </style>
 </head>
 <body>
@@ -31,13 +33,13 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 
 <div class="card">
 <h2>انتخاب تاریخ‌های سانس</h2>
-<input type="text" id="reserveDates" readonly placeholder="انتخاب تاریخ‌ها">
+<input type="text" id="reservePicker" readonly placeholder="انتخاب چند تاریخ">
 <p>تعداد جلسات: <span id="sessionCount">0</span></p>
 </div>
 
 <div class="card">
 <h2>تقویم سانس‌ها</h2>
-<div id="fullCalendar"></div>
+<div id="calendar"></div>
 </div>
 
 <div class="card">
@@ -82,113 +84,108 @@ localStorage.setItem("payments",JSON.stringify(payments))
 }
 
 function updateClock(){
-let now=new persianDate()
-$("#clock").text("📅 "+now.format("YYYY/MM/DD")+" ⏰ "+now.format("HH:mm:ss"))
+let now=new Date()
+let gy=now.getFullYear(),gm=now.getMonth()+1,gd=now.getDate()
+let j=jalaali.toJalaali(gy,gm,gd)
+let time=now.toLocaleTimeString()
+document.getElementById("clock").innerText=
+"📅 "+j.jy+"/"+j.jm+"/"+j.jd+" ⏰ "+time
 }
 setInterval(updateClock,1000)
 
-$("#reserveDates").persianDatepicker({
-format:'YYYY/MM/DD',
-multiple:true,
-inline:false,
-calendar:{
-persian:{locale:'fa'}
-},
-onSelect:function(unix){
-reservations=$("#reserveDates").val().split(",")
-$("#sessionCount").text(reservations.length)
+flatpickr.localize(flatpickr.l10ns.fa)
+
+// انتخاب چند تاریخ
+let reservePicker=flatpickr("#reservePicker",{
+mode:"multiple",
+dateFormat:"Y-m-d",
+onChange:function(selectedDates){
+reservations=selectedDates.map(d=>d.toISOString().split('T')[0])
+document.getElementById("sessionCount").innerText=reservations.length
 saveAll()
-renderCalendar()
+calendar.redraw()
 }
 })
 
-$("#payDate").persianDatepicker({
-format:'YYYY/MM/DD'
-})
-
-function renderCalendar(){
-$("#fullCalendar").persianDatepicker({
+// تقویم ثابت نمایش سانس‌ها
+let calendar=flatpickr("#calendar",{
 inline:true,
-format:'YYYY/MM/DD',
-calendar:{
-persian:{locale:'fa'}
-},
-onRender:function(date){
-let formatted=date.format("YYYY/MM/DD")
-if(reservations.includes(formatted)){
-return {className:"reserved-day"}
+dateFormat:"Y-m-d",
+onDayCreate:function(dObj,dStr,fp,dayElem){
+let date=dayElem.dateObj.toISOString().split('T')[0]
+if(reservations.includes(date)){
+dayElem.classList.add("reserved")
 }
 }
 })
-}
+
+// انتخاب تاریخ پرداخت
+flatpickr("#payDate",{
+dateFormat:"Y-m-d"
+})
 
 function addPlayer(){
-let name=$("#playerName").val()
+let name=document.getElementById("playerName").value
 if(!name)return
 players.push({name})
-$("#playerName").val("")
+document.getElementById("playerName").value=""
 saveAll()
 renderPlayers()
 }
 
-function deletePlayer(index){
-players.splice(index,1)
+function deletePlayer(i){
+players.splice(i,1)
 saveAll()
 renderPlayers()
 }
 
 function renderPlayers(){
 let totalCost=reservations.length*sessionPrice
-$("#playersTable").html("")
-$("#payPlayer").html("")
+let tbody=document.getElementById("playersTable")
+tbody.innerHTML=""
+document.getElementById("payPlayer").innerHTML=""
 players.forEach((p,i)=>{
 let paid=payments.filter(x=>x.player===p.name)
-.reduce((sum,x)=>sum+Number(x.amount),0)
+.reduce((s,x)=>s+Number(x.amount),0)
 let debt=totalCost-paid
-let statusClass="status-zero"
-let statusText="تسویه"
-if(debt>0){statusClass="status-red";statusText="بدهکار"}
-if(debt<0){statusClass="status-green";statusText="طلبکار"}
-$("#playersTable").append(`
+let status="تسویه",cls="status-zero"
+if(debt>0){status="بدهکار";cls="status-red"}
+if(debt<0){status="طلبکار";cls="status-green"}
+tbody.innerHTML+=`
 <tr>
 <td>${p.name}</td>
-<td>${formatMoney(paid)}</td>
-<td class="${statusClass}">${statusText}</td>
+<td>${Number(paid).toLocaleString()}</td>
+<td class="${cls}">${status}</td>
 <td><button onclick="deletePlayer(${i})">حذف</button></td>
-</tr>
-`)
-$("#payPlayer").append(`<option value="${p.name}">${p.name}</option>`)
+</tr>`
+document.getElementById("payPlayer").innerHTML+=
+`<option value="${p.name}">${p.name}</option>`
 })
 }
 
 function submitPayment(){
-let player=$("#payPlayer").val()
-let amount=$("#payAmount").val().replace(/,/g,'')
-let date=$("#payDate").val()
+let player=document.getElementById("payPlayer").value
+let amount=document.getElementById("payAmount").value.replace(/,/g,'')
+let date=document.getElementById("payDate").value
 if(!player||!amount||!date)return
 payments.push({player,amount,date})
-$("#payAmount").val("")
-$("#payDate").val("")
+document.getElementById("payAmount").value=""
+document.getElementById("payDate").value=""
 saveAll()
 renderPlayers()
 }
 
-function formatMoney(x){
-return Number(x).toLocaleString('en-US')
-}
-
-$("#payAmount").on("input",function(){
-let val=$(this).val().replace(/,/g,'')
+document.getElementById("payAmount").addEventListener("input",function(){
+let val=this.value.replace(/,/g,'')
 if(!val)return
-$(this).val(Number(val).toLocaleString('en-US'))
+this.value=Number(val).toLocaleString()
 })
 
 function init(){
 if(reservations.length>0){
-$("#reserveDates").val(reservations.join(","))
-$("#sessionCount").text(reservations.length)
+reservePicker.setDate(reservations)
+document.getElementById("sessionCount").innerText=reservations.length
 }
-renderCalendar()
 renderPlayers()
 updateClock()
 }
