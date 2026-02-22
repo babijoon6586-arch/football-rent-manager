@@ -33,9 +33,7 @@ input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 
 <label>تاریخ شروع جلسه:</label>
 <input type="text" id="startDate" readonly>
 <label>تعداد جلسات:</label>
-<input type="number" id="sessionCountInput" min="1">
-<label>روز هفته (شنبه=6, یکشنبه=0, دوشنبه=1,... جمعه=5):</label>
-<input type="number" id="weekDayInput" min="0" max="6" value="1">
+<input type="number" id="sessionCountInput" min="1" value="1">
 <label>مبلغ هر جلسه:</label>
 <input type="text" id="sessionPrice" inputmode="numeric">
 
@@ -44,7 +42,7 @@ input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 
 <div class="summary">
 <p>تعداد جلسات: <span id="sessionCount">0</span></p>
 <p>مبلغ کل: <span id="totalCost">0</span></p>
-<p>سهم هر نفر (جلسات باقی مانده تقسیم بین بازیکنان فعلی): <span id="sharePerPlayer">0</span></p>
+<p>سهم هر نفر (جلسات باقی مانده): <span id="sharePerPlayer">0</span></p>
 </div>
 </div>
 
@@ -69,6 +67,7 @@ input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 
 <th>پرداختی</th>
 <th>بدهی / طلب</th>
 <th>وضعیت</th>
+<th>پرداخت</th>
 <th>حذف</th>
 </tr>
 </thead>
@@ -88,7 +87,7 @@ function updateClock() {
 }
 setInterval(updateClock,1000);
 
-// شروع جلسه picker
+// start date picker
 $("#startDate").persianDatepicker({format:"YYYY/MM/DD"});
 
 // مبلغ جلسه
@@ -118,6 +117,17 @@ function deletePlayer(i){
   updateCalculations();
 }
 
+// ثبت پرداخت برای بازیکن
+function payAmount(i){
+  let amount = prompt("مبلغ پرداختی را وارد کنید:",0);
+  if(amount===null) return;
+  amount = Number(amount.replace(/,/g,''));
+  if(isNaN(amount)) return alert("مبلغ معتبر نیست");
+  players[i].paid += amount;
+  saveData();
+  updateCalculations();
+}
+
 // ذخیره اطلاعات
 function saveData(){
   localStorage.setItem("players",JSON.stringify(players));
@@ -129,9 +139,8 @@ function saveData(){
 $("#generateSessions").click(function(){
   let start=$("#startDate").val();
   let count = parseInt($("#sessionCountInput").val());
-  let weekDay = parseInt($("#weekDayInput").val());
 
-  if(!start || !count || count<1 || isNaN(weekDay)) { alert("همه فیلدها را درست وارد کنید"); return;}
+  if(!start || !count || count<1) { alert("همه فیلدها را درست وارد کنید"); return;}
 
   let pd = new persianDate(start);
   sessions = [];
@@ -149,7 +158,7 @@ function updateCalculations(){
   let totalCost = sessions.length * sessionPrice;
   $("#totalCost").text(Number(totalCost).toLocaleString());
 
-  let remainingSessions = sessions.filter(s=>!s.done).length;
+  let remainingSessions = sessions.filter(s=>new persianDate(s.date).valueOf()>=new persianDate().valueOf()).length;
   let currentPlayers = players.length;
   let share = currentPlayers>0 ? Math.ceil((sessionPrice*remainingSessions)/currentPlayers) : 0;
   $("#sharePerPlayer").text(Number(share).toLocaleString());
@@ -167,6 +176,7 @@ function updateCalculations(){
       <td>${Number(p.paid||0).toLocaleString()}</td>
       <td>${Number(Math.abs(debt)).toLocaleString()}</td>
       <td class="${cls}">${status}</td>
+      <td><button onclick="payAmount(${i})">پرداخت</button></td>
       <td><button onclick="deletePlayer(${i})">حذف</button></td>
       </tr>
     `);
