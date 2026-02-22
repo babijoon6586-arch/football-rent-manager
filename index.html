@@ -1,44 +1,51 @@
-
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مدیریت اجاره فوتبال</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مدیریت اجاره فوتبال</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>مدیریت اجاره فوتبال</h1>
+<h1>مدیریت اجاره فوتبال</h1>
 
-    <!-- بخش مدیر گروه -->
-    <section id="manager-section">
-        <h2>اطلاعات سانس</h2>
-        <label>تعداد جلسات: <input type="number" id="sessions"></label>
-        <label>مبلغ هر جلسه: <input type="number" id="price"></label>
-        <button id="calculate">محاسبه مبلغ کل و تقسیم</button>
-    </section>
+<section id="manager-section">
+<h2>اطلاعات سانس</h2>
+<label>تعداد جلسات: <input type="number" id="sessions"></label><br>
+<label>مبلغ هر جلسه: <input type="number" id="price"></label><br>
+<label>روزهای رزرو: 
+<select id="days" multiple>
+<option value="0">یکشنبه</option>
+<option value="1">دوشنبه</option>
+<option value="2">سه‌شنبه</option>
+<option value="3">چهارشنبه</option>
+<option value="4">پنجشنبه</option>
+<option value="5">جمعه</option>
+<option value="6">شنبه</option>
+</select>
+</label><br>
+<button id="calculate">محاسبه</button>
+</section>
 
-    <!-- بخش بازیکنان -->
-    <section id="players-section">
-        <h2>بازیکنان</h2>
-        <input type="text" id="player-name" placeholder="نام">
-        <input type="text" id="player-family" placeholder="فامیل">
-        <button id="add-player">افزودن بازیکن</button>
-        <ul id="players-list"></ul>
-    </section>
+<section id="players-section">
+<h2>بازیکنان</h2>
+<input type="text" id="player-name" placeholder="نام">
+<input type="text" id="player-family" placeholder="فامیل">
+<button id="add-player">افزودن بازیکن</button>
+<ul id="players-list"></ul>
+</section>
 
-    <!-- بخش بدهی -->
-    <section id="debts-section">
-        <h2>وضعیت پرداخت</h2>
-        <ul id="debts-list"></ul>
-    </section>
+<section id="debts-section">
+<h2>وضعیت پرداخت</h2>
+<ul id="debts-list"></ul>
+</section>
 
-    <!-- بخش تقویم -->
-    <section id="calendar-section">
-        <h2>تقویم سانس‌ها</h2>
-        <div id="calendar"></div>
-    </section>
+<section id="calendar-section">
+<h2>تقویم سانس‌ها</h2>
+<div id="calendar"></div>
+</section>
 
-    <script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@persian-calendar/persian-calendar@latest/dist/persian-calendar.min.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
