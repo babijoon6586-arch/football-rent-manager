@@ -1,15 +1,13 @@
 let players = JSON.parse(localStorage.getItem("players")||"[]");
-let payments = JSON.parse(localStorage.getItem("payments")||"[]");
 let sessions = JSON.parse(localStorage.getItem("sessions")||"[]");
-let doneSessions = JSON.parse(localStorage.getItem("doneSessions")||"[]");
+let payments = JSON.parse(localStorage.getItem("payments")||"[]");
 let price = parseInt(localStorage.getItem("price")||0);
 let selectedPayDate="";
 
 function save(){
 localStorage.setItem("players",JSON.stringify(players));
-localStorage.setItem("payments",JSON.stringify(payments));
 localStorage.setItem("sessions",JSON.stringify(sessions));
-localStorage.setItem("doneSessions",JSON.stringify(doneSessions));
+localStorage.setItem("payments",JSON.stringify(payments));
 localStorage.setItem("price",price);
 }
 
@@ -27,21 +25,19 @@ let v=e.target.value.replace(/,/g,"");
 if(!isNaN(v)) e.target.value=format(v);
 });
 
-function updateClock(){
-let now=new persianDate();
-document.getElementById("today-date").innerText=now.format("dddd YYYY/MM/DD");
-document.getElementById("clock").innerText=new Date().toLocaleTimeString("fa-IR");
-}
-setInterval(updateClock,1000);
-updateClock();
+document.getElementById("todayTop").innerText=
+new persianDate().format("dddd YYYY/MM/DD");
 
+// ---------- بازیکنان ----------
 function addPlayer(){
-let n=document.getElementById("name").value;
-let f=document.getElementById("family").value;
+let n=document.getElementById("name").value.trim();
+let f=document.getElementById("family").value.trim();
 if(n&&f){
 players.push({n,f});
 save();
 renderPlayers();
+document.getElementById("name").value="";
+document.getElementById("family").value="";
 }
 }
 
@@ -68,6 +64,90 @@ renderPlayers();
 renderDebts();
 }
 
+// ---------- مودال تقویم ----------
+function buildModal(multi,callback){
+
+let now=new persianDate();
+let month=now.month();
+let year=now.year();
+let tempSelected=[...sessions];
+
+let modal=document.createElement("div");
+modal.className="modal";
+
+function render(){
+modal.innerHTML="";
+let box=document.createElement("div");
+box.className="modalBox";
+
+let header=document.createElement("div");
+header.className="modalHeader";
+header.innerHTML=`<span onclick="year--">${year}</span> ${now.format("MMMM")} ${year}`;
+box.appendChild(header);
+
+let days= new persianDate([year,month,1]).daysInMonth();
+for(let i=1;i<=days;i++){
+let d=new persianDate([year,month,i]).format("YYYY/MM/DD");
+let btn=document.createElement("div");
+btn.className="day";
+btn.textContent=i;
+if(tempSelected.includes(d)) btn.classList.add("selected");
+btn.onclick=()=>{
+if(multi){
+if(tempSelected.includes(d))
+tempSelected=tempSelected.filter(x=>x!==d);
+else tempSelected.push(d);
+render();
+}else{
+tempSelected=[d];
+}
+};
+box.appendChild(btn);
+}
+
+let ok=document.createElement("button");
+ok.textContent="✔ تایید";
+ok.onclick=()=>{
+callback(tempSelected);
+document.body.removeChild(modal);
+};
+box.appendChild(ok);
+
+modal.appendChild(box);
+}
+
+render();
+document.body.appendChild(modal);
+}
+
+function openSessionModal(){
+buildModal(true,(dates)=>{
+sessions=dates;
+save();
+document.getElementById("selectedSessions").innerText=sessions.join(" , ");
+renderCalendar();
+renderDebts();
+});
+}
+
+function openPayModal(){
+buildModal(false,(dates)=>{
+selectedPayDate=dates[0];
+document.getElementById("payDateView").innerText=selectedPayDate;
+});
+}
+
+// ---------- پرداخت ----------
+function registerPayment(){
+let i=parseInt(document.getElementById("playerSelect").value);
+let a=parseInt(document.getElementById("payAmount").value.replace(/,/g,""));
+if(!selectedPayDate||!a)return;
+payments.push({i,a});
+save();
+renderDebts();
+}
+
+// ---------- بدهی ----------
 function calculateDebts(){
 price=parseInt(document.getElementById("price").value.replace(/,/g,"")||0);
 save();
@@ -83,100 +163,38 @@ let per=total/players.length;
 players.forEach((p,i)=>{
 let paid=payments.filter(x=>x.i==i).reduce((a,b)=>a+b.a,0);
 let diff=paid-per;
-let txt="";
-if(diff<0)txt="بدهکار: "+format(-diff);
-else if(diff>0)txt="طلبکار: "+format(diff);
-else txt="صفر";
+let txt= diff<0?"بدهکار: "+format(-diff):
+diff>0?"طلبکار: "+format(diff):"صفر";
 let li=document.createElement("li");
 li.textContent=p.n+" "+p.f+" - "+txt;
 ul.appendChild(li);
 });
 }
 
-function registerPayment(){
-let i=parseInt(document.getElementById("playerSelect").value);
-let a=parseInt(document.getElementById("payAmount").value.replace(/,/g,""));
-if(!selectedPayDate||!a)return;
-payments.push({i,a,d:selectedPayDate});
-save();
-renderDebts();
-}
-
-function buildCalendar(){
+// ---------- تقویم ثابت ----------
+function renderCalendar(){
 let cal=document.getElementById("calendar");
 cal.innerHTML="";
-let names=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"];
+let names=["ش","ی","د","س","چ","پ","ج"];
 names.forEach(n=>{
 let div=document.createElement("div");
+div.className="dayName";
 div.textContent=n;
-div.className="day-name";
 cal.appendChild(div);
 });
-
 let now=new persianDate();
 let days=now.daysInMonth();
 for(let i=1;i<=days;i++){
 let d=new persianDate([now.year(),now.month(),i]).format("YYYY/MM/DD");
 let div=document.createElement("div");
-div.textContent=i;
 div.className="day";
-if(d==now.format("YYYY/MM/DD"))div.classList.add("today");
-if(sessions.includes(d))div.classList.add("booked");
-if(doneSessions.includes(d))div.classList.add("done");
-div.onclick=()=>{
-if(sessions.includes(d)){
-if(confirm("علامت به عنوان برگزار شده؟")){
-doneSessions.push(d);
-save();
-buildCalendar();
-}
-}
-};
+div.textContent=i;
+if(sessions.includes(d)) div.classList.add("booked");
 cal.appendChild(div);
 }
-}
-
-function openSessionPicker(){
-openDateModal(date=>{
-if(!sessions.includes(date)){
-sessions.push(date);
-save();
-document.getElementById("selectedSessions").innerText=sessions.join(" , ");
-buildCalendar();
-renderDebts();
-}
-});
-}
-
-function openPayPicker(){
-openDateModal(date=>{
-selectedPayDate=date;
-document.getElementById("payDateView").innerText=date;
-});
-}
-
-function openDateModal(callback){
-let modal=document.createElement("div");
-modal.className="modal";
-let content=document.createElement("div");
-content.className="modal-content";
-let now=new persianDate();
-let days=now.daysInMonth();
-for(let i=1;i<=days;i++){
-let d=new persianDate([now.year(),now.month(),i]).format("YYYY/MM/DD");
-let btn=document.createElement("button");
-btn.textContent=d;
-btn.onclick=()=>{
-callback(d);
-document.body.removeChild(modal);
-};
-content.appendChild(btn);
-}
-modal.appendChild(content);
-document.body.appendChild(modal);
 }
 
 renderPlayers();
 renderDebts();
-buildCalendar();
+renderCalendar();
 document.getElementById("selectedSessions").innerText=sessions.join(" , ");
