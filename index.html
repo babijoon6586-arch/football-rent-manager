@@ -14,7 +14,7 @@ body{font-family:tahoma;background:#f4f6fa;margin:20px}
 .card{background:white;padding:20px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:25px}
 button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer}
 button:hover{background:#0039cb}
-input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
+input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
 .table{width:100%;border-collapse:collapse;margin-top:10px}
 .table th,.table td{padding:10px;border-bottom:1px solid #eee;text-align:center}
 .status-green{color:green;font-weight:bold}
@@ -22,6 +22,7 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 .status-zero{color:#555;font-weight:bold}
 #clock{font-size:18px;font-weight:bold;margin-bottom:15px}
 .reserved-day{background:#ff5252 !important;color:white !important;border-radius:50%}
+.summary{background:#e3f2fd;padding:10px;border-radius:10px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -31,16 +32,21 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 <div class="card">
 <h2>تنظیم سانس</h2>
 <label>مبلغ هر جلسه:</label>
-<input type="text" id="sessionPrice" inputmode="numeric" placeholder="مثلا 1,000,000">
+<input type="text" id="sessionPrice" inputmode="numeric">
 
 <button id="openReserve">انتخاب تاریخ‌های رزرو</button>
 <input type="hidden" id="reserveInput">
 
 <p>تعداد جلسات: <span id="sessionCount">0</span></p>
+
+<div class="summary">
+<p>مبلغ کل: <span id="totalCost">0</span></p>
+<p>سهم هر بازیکن: <span id="sharePerPlayer">0</span></p>
+</div>
 </div>
 
 <div class="card">
-<h2>تقویم سانس‌ها</h2>
+<h2>تقویم</h2>
 <div id="calendar"></div>
 </div>
 
@@ -56,7 +62,9 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 <thead>
 <tr>
 <th>نام</th>
+<th>سهم</th>
 <th>پرداختی</th>
+<th>بدهی / طلب</th>
 <th>وضعیت</th>
 <th>حذف</th>
 </tr>
@@ -65,25 +73,15 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 </table>
 </div>
 
-<div class="card">
-<h2>ثبت پرداخت</h2>
-<select id="payPlayer"></select>
-<input type="text" id="payAmount" placeholder="مبلغ پرداختی" inputmode="numeric">
-<button id="openPayDate">انتخاب تاریخ پرداخت</button>
-<input type="hidden" id="payDate">
-<button onclick="submitPayment()">ثبت پرداخت</button>
-</div>
-
 <script>
+
 let players=JSON.parse(localStorage.getItem("players"))||[]
 let reservations=JSON.parse(localStorage.getItem("reservations"))||[]
-let payments=JSON.parse(localStorage.getItem("payments"))||[]
 let sessionPrice=JSON.parse(localStorage.getItem("sessionPrice"))||0
 
 function saveAll(){
 localStorage.setItem("players",JSON.stringify(players))
 localStorage.setItem("reservations",JSON.stringify(reservations))
-localStorage.setItem("payments",JSON.stringify(payments))
 localStorage.setItem("sessionPrice",JSON.stringify(sessionPrice))
 }
 
@@ -93,29 +91,31 @@ $("#clock").text("📅 "+now.format("YYYY/MM/DD")+" ⏰ "+now.format("HH:mm:ss")
 }
 setInterval(updateClock,1000)
 
-// مبلغ جلسه
 $("#sessionPrice").val(Number(sessionPrice).toLocaleString())
 $("#sessionPrice").on("input",function(){
 let val=$(this).val().replace(/,/g,'')
 sessionPrice=Number(val)
 $(this).val(Number(val).toLocaleString())
 saveAll()
-renderPlayers()
+updateCalculations()
 })
 
-// انتخاب تاریخ رزرو
+// انتخاب چند تاریخ
 $("#reserveInput").persianDatepicker({
 format:"YYYY/MM/DD",
 multiple:true,
+autoClose:false,
 calendar:{persian:{locale:"fa"}},
 onSelect:function(){
-reservations=$("#reserveInput").val().split(",")
+let value=$("#reserveInput").val()
+reservations=value?value.split(","):[]
 $("#sessionCount").text(reservations.length)
 saveAll()
 renderCalendar()
-renderPlayers()
+updateCalculations()
 }
 })
+
 $("#openReserve").click(function(){
 $("#reserveInput").persianDatepicker("show")
 })
@@ -140,28 +140,34 @@ return {className:"reserved-day"}
 function addPlayer(){
 let name=$("#playerName").val()
 if(!name)return
-players.push({name})
+players.push({name,paid:0})
 $("#playerName").val("")
 saveAll()
-renderPlayers()
+updateCalculations()
 }
 
 // حذف بازیکن
 function deletePlayer(i){
 players.splice(i,1)
 saveAll()
-renderPlayers()
+updateCalculations()
 }
 
-// نمایش بازیکنان
-function renderPlayers(){
+// محاسبه سهم خودکار
+function updateCalculations(){
+
 let totalCost=reservations.length*sessionPrice
+let share=players.length>0?Math.ceil(totalCost/players.length):0
+
+$("#totalCost").text(Number(totalCost).toLocaleString())
+$("#sharePerPlayer").text(Number(share).toLocaleString())
+
 $("#playersTable").html("")
-$("#payPlayer").html("")
+
 players.forEach((p,i)=>{
-let paid=payments.filter(x=>x.player===p.name)
-.reduce((s,x)=>s+Number(x.amount),0)
-let debt=totalCost-paid
+
+let debt=share - (p.paid||0)
+
 let status="تسویه",cls="status-zero"
 if(debt>0){status="بدهکار";cls="status-red"}
 if(debt<0){status="طلبکار";cls="status-green"}
@@ -169,42 +175,14 @@ if(debt<0){status="طلبکار";cls="status-green"}
 $("#playersTable").append(`
 <tr>
 <td>${p.name}</td>
-<td>${Number(paid).toLocaleString()}</td>
+<td>${Number(share).toLocaleString()}</td>
+<td>${Number(p.paid||0).toLocaleString()}</td>
+<td>${Number(Math.abs(debt)).toLocaleString()}</td>
 <td class="${cls}">${status}</td>
 <td><button onclick="deletePlayer(${i})">حذف</button></td>
 </tr>`)
-
-$("#payPlayer").append(`<option value="${p.name}">${p.name}</option>`)
 })
 }
-
-// تاریخ پرداخت
-$("#payDate").persianDatepicker({
-format:"YYYY/MM/DD",
-calendar:{persian:{locale:"fa"}}
-})
-$("#openPayDate").click(function(){
-$("#payDate").persianDatepicker("show")
-})
-
-// ثبت پرداخت
-function submitPayment(){
-let player=$("#payPlayer").val()
-let amount=$("#payAmount").val().replace(/,/g,'')
-let date=$("#payDate").val()
-if(!player||!amount||!date)return
-payments.push({player,amount,date})
-$("#payAmount").val("")
-$("#payDate").val("")
-saveAll()
-renderPlayers()
-}
-
-// جدا شدن اعداد
-$("#payAmount").on("input",function(){
-let val=$(this).val().replace(/,/g,'')
-$(this).val(Number(val).toLocaleString())
-})
 
 function init(){
 if(reservations.length>0){
@@ -212,10 +190,11 @@ $("#reserveInput").val(reservations.join(","))
 $("#sessionCount").text(reservations.length)
 }
 renderCalendar()
-renderPlayers()
+updateCalculations()
 updateClock()
 }
 init()
+
 </script>
 
 </body>
