@@ -1,58 +1,199 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مدیریت اجاره فوتبال</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/persian-date@0.1.8/dist/persian-date.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<style>
+body{font-family:tahoma;background:#f4f6fa;margin:20px}
+h2{margin-top:40px}
+.card{background:white;padding:20px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:25px}
+button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer}
+button:hover{background:#0039cb}
+input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
+.table{width:100%;border-collapse:collapse;margin-top:10px}
+.table th,.table td{padding:10px;border-bottom:1px solid #eee;text-align:center}
+.status-green{color:green;font-weight:bold}
+.status-red{color:red;font-weight:bold}
+.status-zero{color:#555;font-weight:bold}
+#clock{font-size:18px;font-weight:bold;margin-bottom:10px}
+.reserved-day{background:#ff5252 !important;color:white !important;border-radius:50%}
+</style>
 </head>
 <body>
 
-<h2 id="todayTop"></h2>
+<div id="clock"></div>
 
-<section>
-<h3>اطلاعات سانس</h3>
-<button onclick="openSessionModal()">انتخاب تاریخ‌های رزرو</button>
-<div id="selectedSessions"></div>
-<br><br>
-<input type="tel" id="price" placeholder="مبلغ هر جلسه">
-<br><br>
-<button onclick="calculateDebts()">محاسبه</button>
-</section>
+<div class="card">
+<h2>انتخاب تاریخ‌های سانس</h2>
+<input type="text" id="reserveDates" readonly placeholder="انتخاب تاریخ‌ها">
+<p>تعداد جلسات: <span id="sessionCount">0</span></p>
+</div>
 
-<section>
-<h3>بازیکنان</h3>
-<input type="text" id="name" placeholder="نام">
-<input type="text" id="family" placeholder="فامیل">
-<button onclick="addPlayer()">افزودن بازیکن</button>
-<ul id="players"></ul>
-</section>
+<div class="card">
+<h2>تقویم سانس‌ها</h2>
+<div id="fullCalendar"></div>
+</div>
 
-<section>
-<h3>ثبت پرداخت</h3>
-<select id="playerSelect"></select>
-<br><br>
-<input type="tel" id="payAmount" placeholder="مبلغ پرداخت">
-<br><br>
-<button onclick="openPayModal()">انتخاب تاریخ پرداخت</button>
-<div id="payDateView"></div>
-<br><br>
-<button onclick="registerPayment()">ثبت پرداخت</button>
-</section>
+<div class="card">
+<h2>افزودن بازیکن</h2>
+<input type="text" id="playerName" placeholder="نام و نام خانوادگی">
+<button onclick="addPlayer()">افزودن</button>
+</div>
 
-<section>
-<h3>وضعیت پرداخت</h3>
-<ul id="debts"></ul>
-</section>
+<div class="card">
+<h2>لیست بازیکنان</h2>
+<table class="table">
+<thead>
+<tr>
+<th>نام</th>
+<th>پرداختی</th>
+<th>وضعیت</th>
+<th>حذف</th>
+</tr>
+</thead>
+<tbody id="playersTable"></tbody>
+</table>
+</div>
 
-<section>
-<h3>تقویم سانس‌ها</h3>
-<div id="calendar"></div>
-</section>
+<div class="card">
+<h2>ثبت پرداخت</h2>
+<select id="payPlayer"></select>
+<input type="text" id="payAmount" placeholder="مبلغ پرداختی" inputmode="numeric">
+<input type="text" id="payDate" readonly placeholder="انتخاب تاریخ پرداخت">
+<button onclick="submitPayment()">ثبت پرداخت</button>
+</div>
 
-<div id="modalContainer"></div>
+<script>
+let players=JSON.parse(localStorage.getItem("players"))||[]
+let reservations=JSON.parse(localStorage.getItem("reservations"))||[]
+let payments=JSON.parse(localStorage.getItem("payments"))||[]
+let sessionPrice=100000
 
-<script src="script.js"></script>
+function saveAll(){
+localStorage.setItem("players",JSON.stringify(players))
+localStorage.setItem("reservations",JSON.stringify(reservations))
+localStorage.setItem("payments",JSON.stringify(payments))
+}
+
+function updateClock(){
+let now=new persianDate()
+$("#clock").text("📅 "+now.format("YYYY/MM/DD")+" ⏰ "+now.format("HH:mm:ss"))
+}
+setInterval(updateClock,1000)
+
+$("#reserveDates").persianDatepicker({
+format:'YYYY/MM/DD',
+multiple:true,
+inline:false,
+calendar:{
+persian:{locale:'fa'}
+},
+onSelect:function(unix){
+reservations=$("#reserveDates").val().split(",")
+$("#sessionCount").text(reservations.length)
+saveAll()
+renderCalendar()
+}
+})
+
+$("#payDate").persianDatepicker({
+format:'YYYY/MM/DD'
+})
+
+function renderCalendar(){
+$("#fullCalendar").persianDatepicker({
+inline:true,
+format:'YYYY/MM/DD',
+calendar:{
+persian:{locale:'fa'}
+},
+onRender:function(date){
+let formatted=date.format("YYYY/MM/DD")
+if(reservations.includes(formatted)){
+return {className:"reserved-day"}
+}
+}
+})
+}
+
+function addPlayer(){
+let name=$("#playerName").val()
+if(!name)return
+players.push({name})
+$("#playerName").val("")
+saveAll()
+renderPlayers()
+}
+
+function deletePlayer(index){
+players.splice(index,1)
+saveAll()
+renderPlayers()
+}
+
+function renderPlayers(){
+let totalCost=reservations.length*sessionPrice
+$("#playersTable").html("")
+$("#payPlayer").html("")
+players.forEach((p,i)=>{
+let paid=payments.filter(x=>x.player===p.name)
+.reduce((sum,x)=>sum+Number(x.amount),0)
+let debt=totalCost-paid
+let statusClass="status-zero"
+let statusText="تسویه"
+if(debt>0){statusClass="status-red";statusText="بدهکار"}
+if(debt<0){statusClass="status-green";statusText="طلبکار"}
+$("#playersTable").append(`
+<tr>
+<td>${p.name}</td>
+<td>${formatMoney(paid)}</td>
+<td class="${statusClass}">${statusText}</td>
+<td><button onclick="deletePlayer(${i})">حذف</button></td>
+</tr>
+`)
+$("#payPlayer").append(`<option value="${p.name}">${p.name}</option>`)
+})
+}
+
+function submitPayment(){
+let player=$("#payPlayer").val()
+let amount=$("#payAmount").val().replace(/,/g,'')
+let date=$("#payDate").val()
+if(!player||!amount||!date)return
+payments.push({player,amount,date})
+$("#payAmount").val("")
+$("#payDate").val("")
+saveAll()
+renderPlayers()
+}
+
+function formatMoney(x){
+return Number(x).toLocaleString('en-US')
+}
+
+$("#payAmount").on("input",function(){
+let val=$(this).val().replace(/,/g,'')
+if(!val)return
+$(this).val(Number(val).toLocaleString('en-US'))
+})
+
+function init(){
+if(reservations.length>0){
+$("#reserveDates").val(reservations.join(","))
+$("#sessionCount").text(reservations.length)
+}
+renderCalendar()
+renderPlayers()
+updateClock()
+}
+init()
+</script>
+
 </body>
 </html>
