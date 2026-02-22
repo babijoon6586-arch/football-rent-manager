@@ -22,7 +22,6 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 .status-zero{color:#555;font-weight:bold}
 #clock{font-size:18px;font-weight:bold;margin-bottom:15px}
 .reserved-day{background:#ff5252 !important;color:white !important;border-radius:50%}
-#calendar{margin-top:15px}
 </style>
 </head>
 <body>
@@ -30,10 +29,14 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 <div id="clock"></div>
 
 <div class="card">
-<h2>تاریخ‌های رزرو</h2>
-<button id="openReserve">انتخاب تاریخ رزرو</button>
-<p>تعداد جلسات: <span id="sessionCount">0</span></p>
+<h2>تنظیم سانس</h2>
+<label>مبلغ هر جلسه:</label>
+<input type="text" id="sessionPrice" inputmode="numeric" placeholder="مثلا 1,000,000">
+
+<button id="openReserve">انتخاب تاریخ‌های رزرو</button>
 <input type="hidden" id="reserveInput">
+
+<p>تعداد جلسات: <span id="sessionCount">0</span></p>
 </div>
 
 <div class="card">
@@ -41,11 +44,47 @@ input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;marg
 <div id="calendar"></div>
 </div>
 
-<script>
-let reservations=JSON.parse(localStorage.getItem("reservations"))||[]
+<div class="card">
+<h2>افزودن بازیکن</h2>
+<input type="text" id="playerName" placeholder="نام و نام خانوادگی">
+<button onclick="addPlayer()">افزودن</button>
+</div>
 
-function saveReservations(){
+<div class="card">
+<h2>لیست بازیکنان</h2>
+<table class="table">
+<thead>
+<tr>
+<th>نام</th>
+<th>پرداختی</th>
+<th>وضعیت</th>
+<th>حذف</th>
+</tr>
+</thead>
+<tbody id="playersTable"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>ثبت پرداخت</h2>
+<select id="payPlayer"></select>
+<input type="text" id="payAmount" placeholder="مبلغ پرداختی" inputmode="numeric">
+<button id="openPayDate">انتخاب تاریخ پرداخت</button>
+<input type="hidden" id="payDate">
+<button onclick="submitPayment()">ثبت پرداخت</button>
+</div>
+
+<script>
+let players=JSON.parse(localStorage.getItem("players"))||[]
+let reservations=JSON.parse(localStorage.getItem("reservations"))||[]
+let payments=JSON.parse(localStorage.getItem("payments"))||[]
+let sessionPrice=JSON.parse(localStorage.getItem("sessionPrice"))||0
+
+function saveAll(){
+localStorage.setItem("players",JSON.stringify(players))
 localStorage.setItem("reservations",JSON.stringify(reservations))
+localStorage.setItem("payments",JSON.stringify(payments))
+localStorage.setItem("sessionPrice",JSON.stringify(sessionPrice))
 }
 
 function updateClock(){
@@ -54,7 +93,17 @@ $("#clock").text("📅 "+now.format("YYYY/MM/DD")+" ⏰ "+now.format("HH:mm:ss")
 }
 setInterval(updateClock,1000)
 
-// دکمه باز کردن تقویم چند انتخابی
+// مبلغ جلسه
+$("#sessionPrice").val(Number(sessionPrice).toLocaleString())
+$("#sessionPrice").on("input",function(){
+let val=$(this).val().replace(/,/g,'')
+sessionPrice=Number(val)
+$(this).val(Number(val).toLocaleString())
+saveAll()
+renderPlayers()
+})
+
+// انتخاب تاریخ رزرو
 $("#reserveInput").persianDatepicker({
 format:"YYYY/MM/DD",
 multiple:true,
@@ -62,16 +111,16 @@ calendar:{persian:{locale:"fa"}},
 onSelect:function(){
 reservations=$("#reserveInput").val().split(",")
 $("#sessionCount").text(reservations.length)
-saveReservations()
+saveAll()
 renderCalendar()
+renderPlayers()
 }
 })
-
 $("#openReserve").click(function(){
 $("#reserveInput").persianDatepicker("show")
 })
 
-// تقویم ثابت نمایش سانس‌ها (فقط یک تقویم)
+// تقویم ثابت
 function renderCalendar(){
 $("#calendar").persianDatepicker("destroy")
 $("#calendar").persianDatepicker({
@@ -87,13 +136,83 @@ return {className:"reserved-day"}
 })
 }
 
-// مقداردهی اولیه
+// افزودن بازیکن
+function addPlayer(){
+let name=$("#playerName").val()
+if(!name)return
+players.push({name})
+$("#playerName").val("")
+saveAll()
+renderPlayers()
+}
+
+// حذف بازیکن
+function deletePlayer(i){
+players.splice(i,1)
+saveAll()
+renderPlayers()
+}
+
+// نمایش بازیکنان
+function renderPlayers(){
+let totalCost=reservations.length*sessionPrice
+$("#playersTable").html("")
+$("#payPlayer").html("")
+players.forEach((p,i)=>{
+let paid=payments.filter(x=>x.player===p.name)
+.reduce((s,x)=>s+Number(x.amount),0)
+let debt=totalCost-paid
+let status="تسویه",cls="status-zero"
+if(debt>0){status="بدهکار";cls="status-red"}
+if(debt<0){status="طلبکار";cls="status-green"}
+
+$("#playersTable").append(`
+<tr>
+<td>${p.name}</td>
+<td>${Number(paid).toLocaleString()}</td>
+<td class="${cls}">${status}</td>
+<td><button onclick="deletePlayer(${i})">حذف</button></td>
+</tr>`)
+
+$("#payPlayer").append(`<option value="${p.name}">${p.name}</option>`)
+})
+}
+
+// تاریخ پرداخت
+$("#payDate").persianDatepicker({
+format:"YYYY/MM/DD",
+calendar:{persian:{locale:"fa"}}
+})
+$("#openPayDate").click(function(){
+$("#payDate").persianDatepicker("show")
+})
+
+// ثبت پرداخت
+function submitPayment(){
+let player=$("#payPlayer").val()
+let amount=$("#payAmount").val().replace(/,/g,'')
+let date=$("#payDate").val()
+if(!player||!amount||!date)return
+payments.push({player,amount,date})
+$("#payAmount").val("")
+$("#payDate").val("")
+saveAll()
+renderPlayers()
+}
+
+// جدا شدن اعداد
+$("#payAmount").on("input",function(){
+let val=$(this).val().replace(/,/g,'')
+$(this).val(Number(val).toLocaleString())
+})
+
 function init(){
 if(reservations.length>0){
 $("#reserveInput").val(reservations.join(","))
 $("#sessionCount").text(reservations.length)
 }
 renderCalendar()
+renderPlayers()
 updateClock()
 }
 init()
