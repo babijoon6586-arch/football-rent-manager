@@ -9,52 +9,49 @@
 </head>
 <body>
 
-<div id="top-bar">
-<div id="today-date"></div>
-<div id="clock"></div>
-</div>
-
-<h1>مدیریت اجاره فوتبال</h1>
+<h2 id="todayTop"></h2>
 
 <section>
-<h2>اطلاعات سانس</h2>
-<button onclick="openSessionPicker()">انتخاب تاریخ‌های رزرو</button>
+<h3>اطلاعات سانس</h3>
+<button onclick="openSessionModal()">انتخاب تاریخ‌های رزرو</button>
 <div id="selectedSessions"></div>
-<br>
+<br><br>
 <input type="tel" id="price" placeholder="مبلغ هر جلسه">
 <br><br>
-<button onclick="calculateDebts()">محاسبه بدهی</button>
+<button onclick="calculateDebts()">محاسبه</button>
 </section>
 
 <section>
-<h2>بازیکنان</h2>
+<h3>بازیکنان</h3>
 <input type="text" id="name" placeholder="نام">
 <input type="text" id="family" placeholder="فامیل">
-<button onclick="addPlayer()">افزودن</button>
+<button onclick="addPlayer()">افزودن بازیکن</button>
 <ul id="players"></ul>
 </section>
 
 <section>
-<h2>ثبت پرداخت</h2>
+<h3>ثبت پرداخت</h3>
 <select id="playerSelect"></select>
-<br>
+<br><br>
 <input type="tel" id="payAmount" placeholder="مبلغ پرداخت">
-<br>
-<button onclick="openPayPicker()">انتخاب تاریخ پرداخت</button>
+<br><br>
+<button onclick="openPayModal()">انتخاب تاریخ پرداخت</button>
 <div id="payDateView"></div>
-<br>
+<br><br>
 <button onclick="registerPayment()">ثبت پرداخت</button>
 </section>
 
 <section>
-<h2>وضعیت پرداخت</h2>
+<h3>وضعیت پرداخت</h3>
 <ul id="debts"></ul>
 </section>
 
 <section>
-<h2>تقویم سانس‌ها</h2>
+<h3>تقویم سانس‌ها</h3>
 <div id="calendar"></div>
 </section>
+
+<div id="modalContainer"></div>
 
 <script src="script.js"></script>
 </body>
