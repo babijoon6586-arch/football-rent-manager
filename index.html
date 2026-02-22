@@ -5,26 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مدیریت اجاره فوتبال</title>
 <link rel="stylesheet" href="style.css">
+<!-- Persian datepicker library -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
 </head>
 <body>
 <h1>مدیریت اجاره فوتبال</h1>
 
 <section id="manager-section">
 <h2>اطلاعات سانس</h2>
-<label>تعداد جلسات: <input type="number" id="sessions"></label><br>
-<label>مبلغ هر جلسه: <input type="number" id="price"></label><br>
-<label>روزهای رزرو: 
-<select id="days" multiple>
-<option value="0">یکشنبه</option>
-<option value="1">دوشنبه</option>
-<option value="2">سه‌شنبه</option>
-<option value="3">چهارشنبه</option>
-<option value="4">پنجشنبه</option>
-<option value="5">جمعه</option>
-<option value="6">شنبه</option>
-</select>
-</label><br>
-<button id="calculate">محاسبه</button>
+<label>تاریخ‌های رزرو: <input type="text" id="session-dates" readonly></label><br>
+<label>مبلغ هر جلسه: <input type="tel" id="price" placeholder="0"></label><br>
+<button id="calculate">محاسبه بدهی‌ها</button>
 </section>
 
 <section id="players-section">
@@ -33,6 +24,16 @@
 <input type="text" id="player-family" placeholder="فامیل">
 <button id="add-player">افزودن بازیکن</button>
 <ul id="players-list"></ul>
+</section>
+
+<section id="payment-section">
+<h2>ثبت پرداخت</h2>
+<label>بازیکن: 
+<select id="pay-player"></select>
+</label><br>
+<label>مبلغ پرداخت: <input type="tel" id="pay-amount" placeholder="0"></label><br>
+<label>تاریخ پرداخت: <input type="text" id="pay-date" readonly></label><br>
+<button id="register-pay">ثبت پرداخت</button>
 </section>
 
 <section id="debts-section">
@@ -45,7 +46,9 @@
 <div id="calendar"></div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/@persian-calendar/persian-calendar@latest/dist/persian-calendar.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@0.1.8/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
