@@ -14,7 +14,7 @@ body{font-family:tahoma;background:#f4f6fa;margin:20px}
 .card{background:white;padding:20px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,.08);margin-bottom:25px}
 button{background:#2962ff;color:white;border:none;padding:8px 15px;border-radius:8px;cursor:pointer}
 button:hover{background:#0039cb}
-input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
+input,select{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 0}
 .table{width:100%;border-collapse:collapse;margin-top:10px}
 .table th,.table td{padding:10px;border-bottom:1px solid #eee;text-align:center}
 .status-green{color:green;font-weight:bold}
@@ -41,7 +41,7 @@ input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 
 
 <div class="summary">
 <p>مبلغ کل: <span id="totalCost">0</span></p>
-<p>سهم هر بازیکن: <span id="sharePerPlayer">0</span></p>
+<p>سهم هر نفر (جلسات باقی مانده تقسیم بر بازیکنان فعلی): <span id="sharePerPlayer">0</span></p>
 </div>
 </div>
 
@@ -74,7 +74,6 @@ input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;margin:5px 
 </div>
 
 <script>
-
 let players=JSON.parse(localStorage.getItem("players"))||[]
 let reservations=JSON.parse(localStorage.getItem("reservations"))||[]
 let sessionPrice=JSON.parse(localStorage.getItem("sessionPrice"))||0
@@ -91,6 +90,7 @@ $("#clock").text("📅 "+now.format("YYYY/MM/DD")+" ⏰ "+now.format("HH:mm:ss")
 }
 setInterval(updateClock,1000)
 
+// مبلغ جلسه
 $("#sessionPrice").val(Number(sessionPrice).toLocaleString())
 $("#sessionPrice").on("input",function(){
 let val=$(this).val().replace(/,/g,'')
@@ -115,7 +115,6 @@ renderCalendar()
 updateCalculations()
 }
 })
-
 $("#openReserve").click(function(){
 $("#reserveInput").persianDatepicker("show")
 })
@@ -127,6 +126,7 @@ $("#calendar").persianDatepicker({
 inline:true,
 format:"YYYY/MM/DD",
 calendar:{persian:{locale:"fa"}},
+navigator:{enabled:true,scroll:{enabled:false}},
 onRender:function(date){
 let d=date.format("YYYY/MM/DD")
 if(reservations.includes(d)){
@@ -153,21 +153,23 @@ saveAll()
 updateCalculations()
 }
 
-// محاسبه سهم خودکار
+// محاسبه سهم و بدهی / طلب
 function updateCalculations(){
-
 let totalCost=reservations.length*sessionPrice
-let share=players.length>0?Math.ceil(totalCost/players.length):0
-
 $("#totalCost").text(Number(totalCost).toLocaleString())
+
+// تعداد جلسات گذشته
+let pastSessionsCount=0
+// برای ساده‌سازی فرض می‌کنیم همه جلسات آینده هستند
+let remainingSessions=reservations.length
+let currentPlayers=players.length
+
+let share= currentPlayers>0 ? Math.ceil((sessionPrice*remainingSessions)/currentPlayers) :0
 $("#sharePerPlayer").text(Number(share).toLocaleString())
 
 $("#playersTable").html("")
-
 players.forEach((p,i)=>{
-
 let debt=share - (p.paid||0)
-
 let status="تسویه",cls="status-zero"
 if(debt>0){status="بدهکار";cls="status-red"}
 if(debt<0){status="طلبکار";cls="status-green"}
@@ -194,7 +196,6 @@ updateCalculations()
 updateClock()
 }
 init()
-
 </script>
 
 </body>
