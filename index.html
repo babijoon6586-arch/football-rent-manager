@@ -4,67 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مدیریت اجاره فوتبال</title>
-
 <link rel="stylesheet" href="style.css">
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-
+<script src="https://cdn.jsdelivr.net/npm/persian-date@0.1.8/dist/persian-date.min.js"></script>
 </head>
 <body>
+
+<div id="top-bar">
+<div id="today-date"></div>
+<div id="clock"></div>
+</div>
 
 <h1>مدیریت اجاره فوتبال</h1>
 
 <section>
 <h2>اطلاعات سانس</h2>
-
-<button id="select-sessions">انتخاب تاریخ‌های رزرو</button>
-<div id="selected-dates"></div>
-
+<button onclick="openSessionPicker()">انتخاب تاریخ‌های رزرو</button>
+<div id="selectedSessions"></div>
 <br>
-
-<label>مبلغ هر جلسه:</label>
-<input type="tel" id="price" inputmode="numeric" placeholder="0">
-
+<input type="tel" id="price" placeholder="مبلغ هر جلسه">
 <br><br>
-
-<button id="calculate">محاسبه بدهی‌ها</button>
-
+<button onclick="calculateDebts()">محاسبه بدهی</button>
 </section>
 
 <section>
 <h2>بازیکنان</h2>
-
-<input type="text" id="player-name" placeholder="نام">
-<input type="text" id="player-family" placeholder="فامیل">
-<button id="add-player">افزودن</button>
-
-<ul id="players-list"></ul>
-
+<input type="text" id="name" placeholder="نام">
+<input type="text" id="family" placeholder="فامیل">
+<button onclick="addPlayer()">افزودن</button>
+<ul id="players"></ul>
 </section>
 
 <section>
 <h2>ثبت پرداخت</h2>
-
-<select id="pay-player"></select>
-
+<select id="playerSelect"></select>
 <br>
-
-<input type="tel" id="pay-amount" inputmode="numeric" placeholder="مبلغ پرداخت">
-
+<input type="tel" id="payAmount" placeholder="مبلغ پرداخت">
 <br>
-
-<button id="select-pay-date">انتخاب تاریخ پرداخت</button>
-<div id="pay-date-view"></div>
-
+<button onclick="openPayPicker()">انتخاب تاریخ پرداخت</button>
+<div id="payDateView"></div>
 <br>
-
-<button id="register-pay">ثبت پرداخت</button>
-
+<button onclick="registerPayment()">ثبت پرداخت</button>
 </section>
 
 <section>
 <h2>وضعیت پرداخت</h2>
-<ul id="debts-list"></ul>
+<ul id="debts"></ul>
 </section>
 
 <section>
@@ -72,11 +56,6 @@
 <div id="calendar"></div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-date@0.1.8/dist/persian-date.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-
 <script src="script.js"></script>
-
 </body>
 </html>
