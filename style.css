@@ -1,33 +1,43 @@
-body {
-    font-family: Tahoma, sans-serif;
-    direction: rtl;
-    padding: 10px;
+body{
+font-family: Tahoma;
+direction: rtl;
+padding: 15px;
 }
-section {
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    border-radius: 8px;
+
+section{
+border:1px solid #ccc;
+padding:10px;
+margin-bottom:20px;
+border-radius:10px;
 }
-input, button, select {
-    margin: 5px 0;
-    padding: 5px;
+
+button{
+padding:6px 10px;
+margin-top:5px;
 }
-#calendar {
-    display: flex;
-    flex-wrap: wrap;
+
+input,select{
+padding:6px;
+margin-top:5px;
 }
-.calendar-day {
-    width: 40px;
-    height: 40px;
-    margin: 2px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid #aaa;
-    border-radius: 4px;
+
+#calendar{
+display:flex;
+flex-wrap:wrap;
 }
-.calendar-day.booked {
-    background-color: #4caf50;
-    color: white;
+
+.day{
+width:40px;
+height:40px;
+margin:2px;
+display:flex;
+justify-content:center;
+align-items:center;
+border:1px solid #aaa;
+border-radius:6px;
+}
+
+.booked{
+background:#4caf50;
+color:white;
 }
