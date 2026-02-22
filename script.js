@@ -1,153 +1,182 @@
-// ---------- داده‌ها ----------
+// ------------------ ذخیره سازی ------------------
+
 let players = JSON.parse(localStorage.getItem("players") || "[]");
-let pricePerSession = parseInt(localStorage.getItem("pricePerSession") || "0");
-let sessionDates = JSON.parse(localStorage.getItem("sessionDates") || "[]");
 let payments = JSON.parse(localStorage.getItem("payments") || "[]");
+let sessionDates = JSON.parse(localStorage.getItem("sessionDates") || "[]");
+let pricePerSession = parseInt(localStorage.getItem("pricePerSession") || "0");
+let selectedPayDate = localStorage.getItem("selectedPayDate") || "";
 
-// ---------- ابزار کمکی ----------
+function saveAll(){
+localStorage.setItem("players", JSON.stringify(players));
+localStorage.setItem("payments", JSON.stringify(payments));
+localStorage.setItem("sessionDates", JSON.stringify(sessionDates));
+localStorage.setItem("pricePerSession", pricePerSession);
+localStorage.setItem("selectedPayDate", selectedPayDate);
+}
+
+// ------------------ فرمت سه رقمی ------------------
+
 function formatNumber(num){
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-function saveData(){
-    localStorage.setItem("players", JSON.stringify(players));
-    localStorage.setItem("pricePerSession", pricePerSession);
-    localStorage.setItem("sessionDates", JSON.stringify(sessionDates));
-    localStorage.setItem("payments", JSON.stringify(payments));
+return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// ---------- افزودن بازیکن ----------
-const playersList = document.getElementById("players-list");
-const payPlayerSelect = document.getElementById("pay-player");
+function numberInputFormatter(input){
+input.addEventListener("input", e=>{
+let value = e.target.value.replace(/,/g,"");
+if(!isNaN(value)){
+e.target.value = formatNumber(value);
+}
+});
+}
 
-document.getElementById("add-player").addEventListener("click",()=>{
-    const name = document.getElementById("player-name").value.trim();
-    const family = document.getElementById("player-family").value.trim();
-    if(name && family){
-        players.push({name,family});
-        saveData();
-        updatePlayersUI();
-        document.getElementById("player-name").value = '';
-        document.getElementById("player-family").value = '';
-    }
+numberInputFormatter(document.getElementById("price"));
+numberInputFormatter(document.getElementById("pay-amount"));
+
+// ------------------ بازیکنان ------------------
+
+function renderPlayers(){
+let list = document.getElementById("players-list");
+let select = document.getElementById("pay-player");
+
+list.innerHTML="";
+select.innerHTML="";
+
+players.forEach((p,i)=>{
+let li = document.createElement("li");
+li.innerHTML = p.name+" "+p.family+" ";
+let del = document.createElement("button");
+del.textContent="حذف";
+del.onclick=()=>{
+players.splice(i,1);
+saveAll();
+renderPlayers();
+renderDebts();
+};
+li.appendChild(del);
+list.appendChild(li);
+
+let option=document.createElement("option");
+option.value=i;
+option.textContent=p.name+" "+p.family;
+select.appendChild(option);
+});
+}
+
+document.getElementById("add-player").onclick=()=>{
+let name=document.getElementById("player-name").value.trim();
+let family=document.getElementById("player-family").value.trim();
+if(name && family){
+players.push({name,family});
+saveAll();
+renderPlayers();
+}
+};
+
+// ------------------ تقویم رزرو ------------------
+
+$("#select-sessions").persianDatepicker({
+format:'YYYY/MM/DD',
+multiple:true,
+onSelect:function(){
+let dates = $(this).persianDatepicker("getState").selectedDates;
+sessionDates = dates.map(d=> new persianDate(d).format("YYYY/MM/DD"));
+document.getElementById("selected-dates").innerText=sessionDates.join(" , ");
+saveAll();
+renderCalendar();
+renderDebts();
+}
 });
 
-function updatePlayersUI(){
-    // لیست بازیکنان
-    playersList.innerHTML = '';
-    players.forEach((p,i)=>{
-        const li = document.createElement("li");
-        li.textContent = `${p.name} ${p.family} `;
-        const btn = document.createElement("button");
-        btn.textContent = "حذف";
-        btn.addEventListener("click",()=>{
-            players.splice(i,1);
-            saveData();
-            updatePlayersUI();
-            updatePayPlayerSelect();
-            updateDebts();
-        });
-        li.appendChild(btn);
-        playersList.appendChild(li);
-    });
-    updatePayPlayerSelect();
-}
+// ------------------ تقویم پرداخت ------------------
 
-// ---------- انتخاب بازیکن برای پرداخت ----------
-function updatePayPlayerSelect(){
-    payPlayerSelect.innerHTML = '';
-    players.forEach((p,i)=>{
-        const option = document.createElement("option");
-        option.value = i;
-        option.textContent = `${p.name} ${p.family}`;
-        payPlayerSelect.appendChild(option);
-    });
+$("#select-pay-date").persianDatepicker({
+format:'YYYY/MM/DD',
+onSelect:function(unix){
+selectedPayDate = new persianDate(unix).format("YYYY/MM/DD");
+document.getElementById("pay-date-view").innerText=selectedPayDate;
+saveAll();
 }
-
-// ---------- ثبت پرداخت ----------
-document.getElementById("register-pay").addEventListener("click",()=>{
-    const playerIndex = parseInt(payPlayerSelect.value);
-    const amount = parseInt(document.getElementById("pay-amount").value.replace(/,/g,'') || 0);
-    const date = $('#pay-date').val();
-    if(!isNaN(playerIndex) && amount>0 && date){
-        payments.push({playerIndex,amount,date});
-        saveData();
-        document.getElementById("pay-amount").value='';
-        updateDebts();
-    }
 });
 
-// ---------- محاسبه بدهی ----------
-function updateDebts(){
-    const debtsList = document.getElementById("debts-list");
-    debtsList.innerHTML = '';
-    const totalPrice = pricePerSession * sessionDates.length;
-    const perPlayer = totalPrice / players.length;
-    players.forEach((p,i)=>{
-        const paid = payments.filter(pay=>pay.playerIndex===i).reduce((a,b)=>a+b.amount,0);
-        let diff = paid - perPlayer;
-        let textStatus = '';
-        if(diff<0) textStatus = `بدهکار: ${formatNumber(-diff)}`;
-        else if(diff>0) textStatus = `طلبکار: ${formatNumber(diff)}`;
-        else textStatus = 'صفر';
-        const li = document.createElement("li");
-        li.textContent = `${p.name} ${p.family} - ${textStatus}`;
-        debtsList.appendChild(li);
-    });
+// ------------------ ثبت پرداخت ------------------
+
+document.getElementById("register-pay").onclick=()=>{
+let playerIndex=parseInt(document.getElementById("pay-player").value);
+let amount=parseInt(document.getElementById("pay-amount").value.replace(/,/g,""));
+if(!selectedPayDate || !amount) return;
+
+payments.push({playerIndex,amount,date:selectedPayDate});
+document.getElementById("pay-amount").value="";
+saveAll();
+renderDebts();
+};
+
+// ------------------ محاسبه بدهی ------------------
+
+document.getElementById("calculate").onclick=()=>{
+pricePerSession=parseInt(document.getElementById("price").value.replace(/,/g,"")||0);
+saveAll();
+renderDebts();
+};
+
+function renderDebts(){
+let list=document.getElementById("debts-list");
+list.innerHTML="";
+
+if(players.length===0) return;
+
+let total=sessionDates.length*pricePerSession;
+let perPlayer= total/players.length;
+
+players.forEach((p,i)=>{
+let paid=payments
+.filter(pay=>pay.playerIndex===i)
+.reduce((a,b)=>a+b.amount,0);
+
+let diff=paid-perPlayer;
+let status="";
+if(diff<0) status="بدهکار: "+formatNumber(-diff);
+else if(diff>0) status="طلبکار: "+formatNumber(diff);
+else status="صفر";
+
+let li=document.createElement("li");
+li.textContent=p.name+" "+p.family+" - "+status;
+list.appendChild(li);
+});
 }
 
-// ---------- انتخاب تاریخ‌های سانس ----------
-$(function(){
-    $("#session-dates").persianDatepicker({
-        format: 'YYYY/MM/DD',
-        observer: true,
-        multiple: true,
-        onSelect: function(unix){
-            const dates = $(this).persianDatepicker("getState").selectedDates;
-            sessionDates = dates.map(d=>d.toISOString());
-            saveData();
-            updateDebts();
-            renderCalendar();
-        }
-    });
-});
+// ------------------ تقویم نمایشی ------------------
 
-// ---------- تقویم پرداخت ----------
-$(function(){
-    $("#pay-date").persianDatepicker({
-        format: 'YYYY/MM/DD',
-        observer: true,
-    });
-});
-
-// ---------- رندر تقویم سانس ----------
-const calendarDiv = document.getElementById("calendar");
 function renderCalendar(){
-    calendarDiv.innerHTML = '';
-    if(sessionDates.length===0) return;
-    const today = new persianDate();
-    const firstDay = new persianDate([today.year(),today.month(),1]);
-    const daysInMonth = firstDay.daysInMonth();
-    for(let d=1; d<=daysInMonth; d++){
-        const dayDiv = document.createElement("div");
-        dayDiv.classList.add("calendar-day");
-        dayDiv.textContent = d;
-        const thisDate = new persianDate([today.year(),today.month(),d]).toString('YYYY/MM/DD');
-        if(sessionDates.map(d=>new Date(d).toISOString().split('T')[0]).includes(new Date(thisDate).toISOString().split('T')[0])){
-            dayDiv.classList.add("booked");
-        }
-        calendarDiv.appendChild(dayDiv);
-    }
+let cal=document.getElementById("calendar");
+cal.innerHTML="";
+
+if(sessionDates.length===0) return;
+
+let today=new persianDate();
+let days=today.daysInMonth();
+
+for(let i=1;i<=days;i++){
+let dayDiv=document.createElement("div");
+dayDiv.classList.add("day");
+dayDiv.textContent=i;
+
+let fullDate=new persianDate([today.year(),today.month(),i]).format("YYYY/MM/DD");
+
+if(sessionDates.includes(fullDate)){
+dayDiv.classList.add("booked");
 }
 
-// ---------- محاسبه و ذخیره ----------
-document.getElementById("calculate").addEventListener("click",()=>{
-    pricePerSession = parseInt(document.getElementById("price").value.replace(/,/g,'')||0);
-    saveData();
-    updateDebts();
-    renderCalendar();
-});
+cal.appendChild(dayDiv);
+}
+}
 
-// ---------- بارگزاری اولیه ----------
-updatePlayersUI();
-updateDebts();
+// ------------------ شروع اولیه ------------------
+
+document.getElementById("price").value = formatNumber(pricePerSession);
+document.getElementById("selected-dates").innerText=sessionDates.join(" , ");
+document.getElementById("pay-date-view").innerText=selectedPayDate;
+
+renderPlayers();
+renderDebts();
 renderCalendar();
